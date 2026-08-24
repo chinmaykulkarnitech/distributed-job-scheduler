@@ -11,10 +11,12 @@ import {
   Divider,
 } from '@mui/material';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import CorporateFareOutlinedIcon from '@mui/icons-material/CorporateFareOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,10 +24,12 @@ export const DRAWER_WIDTH = 232;
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardOutlinedIcon /> },
+  { label: 'Organizations', path: '/organizations', icon: <CorporateFareOutlinedIcon /> },
   { label: 'Projects', path: '/projects', icon: <FolderOutlinedIcon /> },
   { label: 'Queues', path: '/queues', icon: <ViewListOutlinedIcon /> },
   { label: 'Jobs', path: '/jobs', icon: <WorkOutlineOutlinedIcon /> },
   { label: 'Workers', path: '/workers', icon: <MemoryOutlinedIcon /> },
+  { label: 'Retry Policies', path: '/retry-policies', icon: <RuleOutlinedIcon /> },
 ];
 
 export default function Sidebar() {

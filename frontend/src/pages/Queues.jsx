@@ -25,6 +25,8 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import PauseCircleOutlinedIcon from '@mui/icons-material/PauseCircleOutlined';
 import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import { QueueAPI, RetryPolicyAPI } from '../services/api';
 import OrgProjectQueuePicker from '../components/OrgProjectQueuePicker';
 import Loading from '../components/Loading';
@@ -45,6 +47,16 @@ export default function Queues() {
   const [formError, setFormError] = useState('');
 
   const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
+
+  const [detailsQueue, setDetailsQueue] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState('');
+
+  const [assignQueue, setAssignQueue] = useState(null);
+  const [assignRetryPolicyId, setAssignRetryPolicyId] = useState('');
+  const [assignSubmitting, setAssignSubmitting] = useState(false);
+  const [assignError, setAssignError] = useState('');
 
   const loadQueues = useCallback(async (projectId) => {
     if (!projectId) {
@@ -101,10 +113,54 @@ export default function Queues() {
       const action = queue.status === 'PAUSED' ? QueueAPI.resume : QueueAPI.pause;
       const { data } = await action(queue.id);
       setQueues((prev) => prev.map((q) => (q.id === queue.id ? data : q)));
+      setActionSuccess(`Queue "${queue.name}" ${data.status === 'PAUSED' ? 'paused' : 'resumed'}`);
     } catch (err) {
       setActionError(err.friendlyMessage || 'Failed to update queue');
     }
   };
+
+  const openDetails = async (queue) => {
+    setDetailsQueue(queue);
+    setDetailsError('');
+    setDetailsLoading(true);
+    try {
+      const { data } = await QueueAPI.getOne(queue.id);
+      setDetailsQueue(data);
+    } catch (err) {
+      setDetailsError(err.friendlyMessage || 'Failed to load queue details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const openAssignDialog = (queue) => {
+    setAssignQueue(queue);
+    setAssignRetryPolicyId(queue.retryPolicyId || '');
+    setAssignError('');
+  };
+
+  const handleAssignRetryPolicy = async (e) => {
+    e.preventDefault();
+    if (!assignRetryPolicyId) {
+      setAssignError('Select a retry policy to assign.');
+      return;
+    }
+    setAssignError('');
+    setAssignSubmitting(true);
+    try {
+      const { data } = await QueueAPI.assignRetryPolicy(assignQueue.id, assignRetryPolicyId);
+      setQueues((prev) => prev.map((q) => (q.id === assignQueue.id ? data : q)));
+      await loadQueues(picker.projectId);
+      setActionSuccess(`Retry policy assigned to "${assignQueue.name}"`);
+      setAssignQueue(null);
+    } catch (err) {
+      setAssignError(err.friendlyMessage || 'Failed to assign retry policy');
+    } finally {
+      setAssignSubmitting(false);
+    }
+  };
+
+  const retryPolicyName = (id) => retryPolicies.find((rp) => rp.id === id)?.name;
 
   return (
     <Box>
@@ -131,6 +187,7 @@ export default function Queues() {
 
       <ErrorAlert message={error} onClose={() => setError('')} />
       <ErrorAlert message={actionError} onClose={() => setActionError('')} snackbar />
+      <ErrorAlert message={actionSuccess} onClose={() => setActionSuccess('')} severity="success" snackbar />
 
       {loading ? (
         <Loading label="Loading queues..." />
@@ -160,7 +217,9 @@ export default function Queues() {
                     <TableCell>{q.concurrencyLimit}</TableCell>
                     <TableCell>
                       {q.retryPolicyId ? (
-                        <Chip size="small" variant="outlined" label={q.retryPolicyId.slice(0, 8)} />
+                        <Tooltip title={q.retryPolicyId}>
+                          <Chip size="small" variant="outlined" label={retryPolicyName(q.retryPolicyId) || q.retryPolicyId.slice(0, 8)} />
+                        </Tooltip>
                       ) : (
                         <Typography variant="caption" color="text.secondary">
                           none
@@ -169,15 +228,27 @@ export default function Queues() {
                     </TableCell>
                     <TableCell>{q.createdAt ? new Date(q.createdAt).toLocaleDateString() : '—'}</TableCell>
                     <TableCell align="right">
-                      <Tooltip title={q.status === 'PAUSED' ? 'Resume queue' : 'Pause queue'}>
-                        <IconButton size="small" onClick={() => toggleQueue(q)}>
-                          {q.status === 'PAUSED' ? (
-                            <PlayCircleOutlinedIcon fontSize="small" />
-                          ) : (
-                            <PauseCircleOutlinedIcon fontSize="small" />
-                          )}
-                        </IconButton>
-                      </Tooltip>
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="View details">
+                          <IconButton size="small" onClick={() => openDetails(q)}>
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Assign retry policy">
+                          <IconButton size="small" onClick={() => openAssignDialog(q)}>
+                            <RuleOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={q.status === 'PAUSED' ? 'Resume queue' : 'Pause queue'}>
+                          <IconButton size="small" onClick={() => toggleQueue(q)}>
+                            {q.status === 'PAUSED' ? (
+                              <PlayCircleOutlinedIcon fontSize="small" />
+                            ) : (
+                              <PauseCircleOutlinedIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -248,6 +319,103 @@ export default function Queues() {
             <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button type="submit" variant="contained" disabled={submitting}>
               {submitting ? 'Creating...' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      {/* Queue details dialog */}
+      <Dialog open={Boolean(detailsQueue)} onClose={() => setDetailsQueue(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Queue details</DialogTitle>
+        <DialogContent>
+          <ErrorAlert message={detailsError} onClose={() => setDetailsError('')} />
+          {detailsLoading ? (
+            <Loading label="Loading queue..." />
+          ) : (
+            detailsQueue && (
+              <Stack spacing={1.5}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">ID</Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                    {detailsQueue.id}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Name</Typography>
+                  <Typography variant="body2">{detailsQueue.name}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Status</Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <StatusChip status={detailsQueue.status} />
+                  </Box>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Project ID</Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                    {detailsQueue.projectId}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Priority</Typography>
+                  <Typography variant="body2">{detailsQueue.priority}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Concurrency limit</Typography>
+                  <Typography variant="body2">{detailsQueue.concurrencyLimit}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Retry policy</Typography>
+                  <Typography variant="body2">
+                    {detailsQueue.retryPolicyId ? (retryPolicyName(detailsQueue.retryPolicyId) || detailsQueue.retryPolicyId) : 'None'}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Created</Typography>
+                  <Typography variant="body2">
+                    {detailsQueue.createdAt ? new Date(detailsQueue.createdAt).toLocaleString() : '—'}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Updated</Typography>
+                  <Typography variant="body2">
+                    {detailsQueue.updatedAt ? new Date(detailsQueue.updatedAt).toLocaleString() : '—'}
+                  </Typography>
+                </Box>
+              </Stack>
+            )
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsQueue(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assign retry policy dialog */}
+      <Dialog open={Boolean(assignQueue)} onClose={() => setAssignQueue(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Assign retry policy — {assignQueue?.name}</DialogTitle>
+        <Box component="form" onSubmit={handleAssignRetryPolicy}>
+          <DialogContent>
+            <ErrorAlert message={assignError} onClose={() => setAssignError('')} />
+            <TextField
+              select
+              fullWidth
+              label="Retry policy"
+              value={assignRetryPolicyId}
+              onChange={(e) => setAssignRetryPolicyId(e.target.value)}
+              helperText={retryPolicies.length === 0 ? 'No retry policies yet — create one on the Retry Policies page.' : ' '}
+            >
+              {retryPolicies.map((rp) => (
+                <MenuItem key={rp.id} value={rp.id}>
+                  {rp.name} ({rp.strategy}, max {rp.maxAttempts})
+                </MenuItem>
+              ))}
+            </TextField>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAssignQueue(null)}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={assignSubmitting || retryPolicies.length === 0}>
+              {assignSubmitting ? 'Assigning...' : 'Assign'}
             </Button>
           </DialogActions>
         </Box>

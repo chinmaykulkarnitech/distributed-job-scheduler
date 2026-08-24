@@ -5,10 +5,12 @@ import Navbar from './Navbar';
 
 const TITLES = {
   '/dashboard': 'Dashboard',
+  '/organizations': 'Organizations',
   '/projects': 'Projects',
   '/queues': 'Queues',
   '/jobs': 'Jobs',
   '/workers': 'Workers',
+  '/retry-policies': 'Retry Policies',
 };
 
 function titleFor(pathname) {

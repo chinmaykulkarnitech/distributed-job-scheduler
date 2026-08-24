@@ -21,7 +21,9 @@ import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
-import { JobAPI, WorkerAPI } from '../services/api';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
+import { JobAPI, WorkerAPI, OrganizationAPI, ProjectAPI, QueueAPI } from '../services/api';
 import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import StatusChip from '../components/StatusChip';
@@ -58,8 +60,46 @@ function StatCard({ label, value, icon, tint }) {
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [workers, setWorkers] = useState([]);
+  const [projectCount, setProjectCount] = useState(0);
+  const [queueCount, setQueueCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // The backend has no "list all projects" / "list all queues" endpoints —
+  // only projects-by-organization and queues-by-project. To get totals for
+  // the dashboard we walk: organizations -> projects (per org) -> queues
+  // (per project), fanning each level out with Promise.all. Any single
+  // failure in the walk is swallowed so one bad org/project doesn't blank
+  // out the whole dashboard; job/worker stats are unaffected either way.
+  const loadOrgTotals = useCallback(async () => {
+    try {
+      const { data: organizations } = await OrganizationAPI.getMine();
+      const projectLists = await Promise.all(
+        (organizations || []).map((org) =>
+          ProjectAPI.getByOrganization(org.id)
+            .then(({ data }) => data || [])
+            .catch(() => [])
+        )
+      );
+      const allProjects = projectLists.flat();
+
+      const queueLists = await Promise.all(
+        allProjects.map((project) =>
+          QueueAPI.getByProject(project.id)
+            .then(({ data }) => data || [])
+            .catch(() => [])
+        )
+      );
+      const allQueues = queueLists.flat();
+
+      setProjectCount(allProjects.length);
+      setQueueCount(allQueues.length);
+    } catch {
+      // Non-fatal: organizations/projects/queues totals just won't show.
+      setProjectCount(0);
+      setQueueCount(0);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setError('');
@@ -72,7 +112,8 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+    await loadOrgTotals();
+  }, [loadOrgTotals]);
 
   useEffect(() => {
     load();
@@ -131,10 +172,20 @@ export default function Dashboard() {
       </Grid>
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard label="Online Workers" value={workers.length} icon={<DnsOutlinedIcon />} tint="#0EA5A4" />
         </Grid>
-        <Grid item xs={12} sm={8}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard label="Projects" value={projectCount} icon={<FolderOutlinedIcon />} tint="#7C3AED" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard label="Queues" value={queueCount} icon={<ViewListOutlinedIcon />} tint="#0891B2" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3} sx={{ display: { xs: 'none', md: 'block' } }} />
+      </Grid>
+
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12}>
           <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
             <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
               Job status distribution
