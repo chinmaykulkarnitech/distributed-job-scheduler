@@ -358,9 +358,228 @@ npm run dev
 
 ## Docker
 
-Docker configuration is provided in the `docker/` directory.
+## 🐳 Docker Setup
 
-Docker support is intended to simplify local deployment and environment setup.
+The application can be run using Docker Compose, which starts the MySQL database, Spring Boot backend, and React frontend as separate containers.
+
+### Prerequisites
+
+Install:
+
+* Docker Desktop
+* Git
+
+Verify the installation:
+
+```bash
+docker --version
+docker compose version
+```
+
+### Docker Files
+
+```text
+docker/
+├── Dockerfile.backend
+├── Dockerfile.frontend
+└── docker-compose.yml
+```
+
+### Environment Variables
+
+Create a `.env` file in the **project root**:
+
+```text
+distributed-job-scheduler/
+├── .env
+├── backend/
+├── frontend/
+├── database/
+├── docker/
+├── docs/
+└── README.md
+```
+
+Example:
+
+```env
+DB_PASSWORD=change_me
+JWT_SECRET=change_this_to_a_secure_secret
+JWT_EXPIRATION=86400000
+```
+
+> `.env` contains local secrets and must not be committed to GitHub.
+
+### Start the Application with Docker
+
+From the project root:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml up --build
+```
+
+This command:
+
+1. Builds the Spring Boot backend image.
+2. Builds the React frontend image.
+3. Pulls the MySQL image if required.
+4. Creates the Docker network.
+5. Creates the MySQL database using `database/schema.sql`.
+6. Starts all application containers.
+
+### Services
+
+After startup:
+
+| Service     | Address                                     |
+| ----------- | ------------------------------------------- |
+| Frontend    | http://localhost:3000                       |
+| Backend API | http://localhost:8081                       |
+| Swagger UI  | http://localhost:8081/swagger-ui/index.html |
+| MySQL       | localhost:3307                              |
+
+### Docker Port Mapping
+
+```text
+Frontend:
+localhost:3000 → frontend container port 80
+
+Backend:
+localhost:8081 → backend container port 8080
+
+MySQL:
+localhost:3307 → MySQL container port 3306
+```
+
+The backend connects to MySQL **inside the Docker network** using:
+
+```text
+jdbc:mysql://mysql:3306/job_scheduler
+```
+
+The backend should therefore **not** use `localhost:3307` for its Docker database connection.
+
+### Check Container Status
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml ps
+```
+
+Expected containers:
+
+```text
+job-scheduler-mysql
+job-scheduler-backend
+job-scheduler-frontend
+```
+
+### View Logs
+
+View all logs:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml logs
+```
+
+Backend logs:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml logs backend
+```
+
+Frontend logs:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml logs frontend
+```
+
+MySQL logs:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml logs mysql
+```
+
+### Stop the Application
+
+Stop the containers:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml down
+```
+
+This stops and removes the containers while preserving the named MySQL volume.
+
+### Start Again Without Rebuilding
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml up
+```
+
+### Rebuild After Source Code Changes
+
+After changing the backend or frontend source:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml up --build
+```
+
+The Docker images are rebuilt using the **current contents** of:
+
+```text
+backend/
+frontend/
+```
+
+### Database Initialization
+
+The Compose configuration mounts:
+
+```text
+database/schema.sql
+```
+
+into the MySQL initialization directory.
+
+For a **new MySQL volume**, the schema is executed automatically when the MySQL container initializes.
+
+### Reset the Docker Database
+
+To completely remove the Docker database and recreate it from `schema.sql`:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml down -v
+```
+
+Then:
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml up --build
+```
+
+> `down -v` removes the MySQL Docker volume and permanently deletes the data stored in that Docker database.
+
+### Docker API Documentation
+
+After the backend container is running, Swagger UI is available at:
+
+```text
+http://localhost:8081/swagger-ui/index.html
+```
+
+### Docker Project Flow
+
+```text
+                    Docker Compose
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+     React Frontend  Spring Boot      MySQL
+      Port 3000       Port 8081      Port 3307
+          │              │              │
+          └──────────────┤              │
+                         └──────► mysql:3306
+```
+
 
 ## Testing
 
