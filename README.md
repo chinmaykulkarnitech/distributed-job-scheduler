@@ -263,8 +263,6 @@ distributed-job-scheduler/
 |   └── swagger-api.pdf
 |
 ├── screenshots/
-│   ├── swagger-api.png
-│   ├── database-schema.png
 │   ├── dashboard-overview.png
 │   ├── job-execution.png
 │   └── worker-monitoring.png
