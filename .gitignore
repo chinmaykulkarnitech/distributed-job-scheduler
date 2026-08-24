@@ -1,0 +1,37 @@
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Java / Maven
+target/
+*.class
+
+# Environment / secrets
+.env
+.env.*
+application-local.properties
+application-secret.properties
+
+
+# Docker
+*.tar
+*.tar.gz
+docker-data/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+
+# Frontend environment files
+frontend/.env
+frontend/.env.*
