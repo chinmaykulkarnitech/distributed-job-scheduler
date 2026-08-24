@@ -29,7 +29,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-     //   System.out.println(">>> Authorization Header: " + authHeader);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             System.out.println(">>> NO JWT");
@@ -43,17 +42,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             boolean valid = jwtService.isValid(token);
 
-       //     System.out.println(">>> JWT VALID: " + valid);
 
             if (!valid) {
-         //       System.out.println(">>> JWT REJECTED");
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String userId = jwtService.extractUserId(token);
 
-        //    System.out.println(">>> USER ID: " + userId);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -65,13 +61,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext()
                     .setAuthentication(authentication);
 
-       //     System.out.println(">>> AUTHENTICATION SET");
 
         } catch (Exception e) {
 
-      //      System.out.println(">>> JWT ERROR: " + e.getMessage());
-
-        }
+              }
 
         filterChain.doFilter(request, response);
     }
