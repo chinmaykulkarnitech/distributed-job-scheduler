@@ -198,9 +198,9 @@ http://localhost:8080/swagger-ui/index.html
 
 Swagger provides interactive documentation for the available authentication, project, queue, job, worker, scheduling, execution, retry, and monitoring APIs.
 
-A screenshot of the API documentation is available in:
+A PDF export of the API documentation is available in:
 
-`screenshots/swagger-api.png`
+docs/swagger-api.pdf
 
 ## Technology Stack
 
@@ -257,9 +257,11 @@ distributed-job-scheduler/
 ├── docker/
 │
 ├── docs/
-│   ├── er-diagram.png
-│   └── architecture-diagram.png
-│
+|   ├── architecture-diagram.png
+|   ├── er-diagram.png
+|   ├── design-decisions.md
+|   └── swagger-api.pdf
+|
 ├── screenshots/
 │   ├── swagger-api.png
 │   ├── database-schema.png
