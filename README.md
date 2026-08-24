@@ -449,6 +449,9 @@ localhost:8081 → backend container port 8080
 
 MySQL:
 localhost:3307 → MySQL container port 3306
+
+Swagger   → http://localhost:8081/swagger-ui/index.html
+
 ```
 
 The backend connects to MySQL **inside the Docker network** using:
