@@ -12,59 +12,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-//import java.io.IOException;
-//
-//@Component
-//@RequiredArgsConstructor
-//public class JwtAuthenticationFilter extends OncePerRequestFilter {
-//
-//    private final JwtService jwtService;
-//
-//    @Override
-//    protected void doFilterInternal(
-//            HttpServletRequest request,
-//            HttpServletResponse response,
-//            FilterChain filterChain
-//    ) throws ServletException, IOException {
-//
-//        String authHeader = request.getHeader("Authorization");
-//
-//        // No Authorization header
-//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
-//
-//        // Remove "Bearer "
-//        String token = authHeader.substring(7);
-//
-//        // Validate JWT
-//        if (!jwtService.isValid(token)) {
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
-//
-//        // Get user ID from JWT
-//        String userId = jwtService.extractUserId(token);
-//
-//        // Create authenticated user
-//        UsernamePasswordAuthenticationToken authentication =
-//                new UsernamePasswordAuthenticationToken(
-//                        userId,
-//                        null,
-//                        java.util.Collections.emptyList()
-//                );
-//
-//        // Store authentication in Spring Security
-//        SecurityContextHolder.getContext()
-//                .setAuthentication(authentication);
-//
-//        // Continue request
-//        filterChain.doFilter(request, response);
-//    }
-//}
-
-
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
