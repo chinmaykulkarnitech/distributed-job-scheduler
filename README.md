@@ -599,6 +599,28 @@ Critical functionality should be tested around:
 * Job execution history
 * Idempotency
 
+
+## 🧪 Automated Testing
+
+The backend includes automated tests for critical scheduler functionality using JUnit 5 and Mockito.
+
+### Test Coverage
+
+- Application context startup
+- Job creation
+- Job idempotency
+- Job claiming and worker concurrency
+- Job completion
+- Job retry handling
+- Worker heartbeat processing
+
+### Run Tests
+
+From the `backend` directory:
+
+```bash
+./mvnw test
+
 ## Documentation
 
 Project documentation and diagrams:
