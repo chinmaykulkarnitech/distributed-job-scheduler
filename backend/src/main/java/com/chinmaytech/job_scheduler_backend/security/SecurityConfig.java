@@ -42,7 +42,6 @@ public class SecurityConfig {
                         // Authentication APIs are public
                                 .requestMatchers(
                                         "/api/auth/**",
-                                        "/api/workers/register",
                                         "/swagger-ui/**",
                                         "/swagger-ui.html",
                                         "/v3/api-docs/**"

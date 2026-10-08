@@ -11,6 +11,7 @@ target/
 # Environment / secrets
 .env
 .env.*
+!.env.example
 application-local.properties
 application-secret.properties
 
@@ -35,3 +36,4 @@ dist/
 # Frontend environment files
 frontend/.env
 frontend/.env.*
+!frontend/.env.example

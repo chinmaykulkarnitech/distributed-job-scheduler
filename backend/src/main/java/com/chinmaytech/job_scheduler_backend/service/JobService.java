@@ -1,96 +1,5 @@
 package com.chinmaytech.job_scheduler_backend.service;
-//
-//
-//import com.chinmaytech.job_scheduler_backend.dto.Job.CreateJobRequest;
-//import com.chinmaytech.job_scheduler_backend.dto.Job.JobResponse;
-//import com.chinmaytech.job_scheduler_backend.entity.Job;
-//import com.chinmaytech.job_scheduler_backend.entity.Queue;
-//import com.chinmaytech.job_scheduler_backend.mapper.JobMapper;
-//import com.chinmaytech.job_scheduler_backend.repository.JobRepository;
-//import com.chinmaytech.job_scheduler_backend.repository.QueueRepository;
-//import lombok.RequiredArgsConstructor;
-//
-//import org.springframework.stereotype.Service;
-//import org.springframework.transaction.annotation.Transactional;
-//
-//import java.util.List;
-//
-//@Service
-//@RequiredArgsConstructor
-//public class JobService {
-//
-//    private final JobRepository jobRepository;
-//    private final QueueRepository queueRepository;
-//    private final JobMapper jobMapper;
-//
-//    @Transactional
-//    public JobResponse createJob(CreateJobRequest request, String userId) {
-//
-//        // 1. Check if queue exists
-//        Queue queue = queueRepository
-//                .findById(request.getQueueId())
-//                .orElseThrow(() ->
-//                        new RuntimeException("Queue not found")
-//                );
-//
-//        // 2. Check idempotency key
-//        if (request.getIdempotencyKey() != null &&
-//                jobRepository.existsByQueueIdAndIdempotencyKey(
-//                        request.getQueueId(),
-//                        request.getIdempotencyKey()
-//                )) {
-//
-//            throw new RuntimeException(
-//                    "Job with this idempotency key already exists"
-//            );
-//        }
-//
-//        // 3. Create Job
-//        Job job = Job.builder()
-//                .queueId(queue.getId())
-//                .jobType(request.getJobType())
-//                .payload(request.getPayload())
-//                .priority(
-//                        request.getPriority() != null
-//                                ? request.getPriority()
-//                                : queue.getPriority()
-//                )
-//                .runAt(request.getRunAt())
-//                .idempotencyKey(request.getIdempotencyKey())
-//                .build();
-//
-//        // 4. Save
-//        job = jobRepository.save(job);
-//
-//        // 5. Return response
-//        return jobMapper.mapJobToJobResponse(job);
-//    }
-//
-//    public JobResponse getJob(String jobId, String userId) {
-//
-//        Job job = jobRepository.findById(jobId)
-//                .orElseThrow(() ->
-//                        new RuntimeException("Job not found")
-//                );
-//
-//        return jobMapper.mapJobToJobResponse(job);
-//    }
-//    public List<JobResponse> getJobsByQueue(String queueId, String userId) {
-//
-//        List<Job> jobs = jobRepository.findByQueueId(queueId);
-//
-//        List<JobResponse> responses = new java.util.ArrayList<>();
-//
-//        for (Job job : jobs) {
-//            responses.add(
-//                    jobMapper.mapJobToJobResponse(job)
-//            );
-//        }
-//
-//        return responses;
-//    }
-//}
-//
+
 import com.chinmaytech.job_scheduler_backend.dto.Job.BatchJobResponse;
 import com.chinmaytech.job_scheduler_backend.dto.Job.CreateBatchJobRequest;
 import com.chinmaytech.job_scheduler_backend.dto.Job.CreateJobRequest;
@@ -326,28 +235,35 @@ public class JobService {
             throw new ConflictException("Worker concurrency limit reached");
         }
 
-        // 4. Find available job
+        // 4. A worker must belong to an organization, and only claims that org's jobs
+        if (worker.getOrganizationId() == null) {
+            throw new ConflictException(
+                    "Worker is not assigned to an organization. Re-register it with an organizationId."
+            );
+        }
+
+        // 5. Find available job (scoped to the worker's organization)
         Job job = jobRepository
-                .findNextAvailableJob(LocalDateTime.now())
+                .findNextAvailableJob(LocalDateTime.now(), worker.getOrganizationId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException("No jobs available")
                 );
-        // 5. Claim job
+        // 6. Claim job
         job.setStatus("RUNNING");
         job.setClaimedBy(workerId);
         job.setClaimedAt(LocalDateTime.now());
 
-        // 6. Increase attempts
+        // 7. Increase attempts
         job.setAttemptCount(
                 job.getAttemptCount() + 1
         );
 
-        // 7. Increase active jobs
+        // 8. Increase active jobs
         worker.setActiveJobs(
                 worker.getActiveJobs() + 1
         );
 
-        // 8. Save
+        // 9. Save
         jobRepository.save(job);
         workerRepository.save(worker);
 

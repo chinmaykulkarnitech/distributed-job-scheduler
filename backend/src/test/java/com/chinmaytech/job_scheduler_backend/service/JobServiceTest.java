@@ -27,7 +27,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.chinmaytech.job_scheduler_backend.exception.ResourceNotFoundException;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -218,8 +220,11 @@ class JobServiceTest {
         when(worker.getConcurrencyLimit())
                 .thenReturn(2);
 
+        when(worker.getOrganizationId())
+                .thenReturn(organizationId);
+
         when(jobRepository
-                .findNextAvailableJob(any(LocalDateTime.class)))
+                .findNextAvailableJob(any(LocalDateTime.class), eq(organizationId)))
                 .thenReturn(Optional.of(job));
 
         when(job.getAttemptCount())
@@ -255,6 +260,56 @@ class JobServiceTest {
 
         verify(workerRepository)
                 .save(worker);
+    }
+
+    @Test
+    void claimJob_shouldOnlyLookForJobsInTheWorkersOrganization() {
+
+        // A worker in org A must query with org A, never with another org.
+        Worker worker = mock(Worker.class);
+
+        when(workerRepository.findByIdForUpdate(workerId))
+                .thenReturn(Optional.of(worker));
+        when(worker.getStatus()).thenReturn("ONLINE");
+        when(worker.getActiveJobs()).thenReturn(0);
+        when(worker.getConcurrencyLimit()).thenReturn(1);
+        when(worker.getOrganizationId()).thenReturn("org-A");
+
+        // Only org B has a queued job; the query for org A finds nothing.
+        when(jobRepository.findNextAvailableJob(any(LocalDateTime.class), eq("org-A")))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> jobService.claimJob(workerId)
+        );
+
+        verify(jobRepository)
+                .findNextAvailableJob(any(LocalDateTime.class), eq("org-A"));
+        verify(jobRepository, never())
+                .findNextAvailableJob(any(LocalDateTime.class), eq("org-B"));
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void claimJob_shouldRejectWorkerWithoutOrganization() {
+
+        Worker worker = mock(Worker.class);
+
+        when(workerRepository.findByIdForUpdate(workerId))
+                .thenReturn(Optional.of(worker));
+        when(worker.getStatus()).thenReturn("ONLINE");
+        when(worker.getActiveJobs()).thenReturn(0);
+        when(worker.getConcurrencyLimit()).thenReturn(1);
+        when(worker.getOrganizationId()).thenReturn(null);
+
+        assertThrows(
+                ConflictException.class,
+                () -> jobService.claimJob(workerId)
+        );
+
+        verify(jobRepository, never())
+                .findNextAvailableJob(any(LocalDateTime.class), any());
     }
 
     @Test

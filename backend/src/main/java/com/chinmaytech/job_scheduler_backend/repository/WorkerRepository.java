@@ -16,6 +16,8 @@ import java.util.Optional;
 public interface WorkerRepository extends JpaRepository<Worker, String> {
 
     List<Worker> findByStatus(String status);
+
+    List<Worker> findByStatusAndOrganizationId(String status, String organizationId);
     Optional<Worker> findByName(String name);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

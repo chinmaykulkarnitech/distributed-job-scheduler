@@ -20,12 +20,13 @@ import {
   Tooltip,
   Chip,
   LinearProgress,
+  MenuItem,
 } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import FavoriteOutlinedIcon from '@mui/icons-material/FavoriteOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
-import { WorkerAPI } from '../services/api';
+import { WorkerAPI, OrganizationAPI } from '../services/api';
 import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import StatusChip from '../components/StatusChip';
@@ -33,6 +34,8 @@ import StatusChip from '../components/StatusChip';
 const POLL_MS = 10000;
 
 export default function Workers() {
+  const [organizations, setOrganizations] = useState([]);
+  const [organizationId, setOrganizationId] = useState('');
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -54,17 +57,36 @@ export default function Workers() {
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
+  // Workers belong to an organization, so load the user's orgs first.
+  useEffect(() => {
+    OrganizationAPI.getMine()
+      .then(({ data }) => {
+        const orgs = data || [];
+        setOrganizations(orgs);
+        if (orgs.length > 0) {
+          setOrganizationId((current) => current || orgs[0].id);
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        setError(err.friendlyMessage || 'Failed to load organizations');
+        setLoading(false);
+      });
+  }, []);
+
   const loadWorkers = useCallback(async () => {
+    if (!organizationId) return;
     setError('');
     try {
-      const { data } = await WorkerAPI.getOnline();
+      const { data } = await WorkerAPI.getOnline(organizationId);
       setWorkers(data || []);
     } catch (err) {
       setError(err.friendlyMessage || 'Failed to load workers');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
     loadWorkers();
@@ -77,7 +99,7 @@ export default function Workers() {
     setRegisterError('');
     setRegisterSubmitting(true);
     try {
-      const { data } = await WorkerAPI.register(registerName);
+      const { data } = await WorkerAPI.register(registerName, organizationId);
       setWorkers((prev) => [data, ...prev]);
       setRegisterName('');
       setRegisterOpen(false);
@@ -149,13 +171,31 @@ export default function Workers() {
               </Button>
             </Stack>
           </Box>
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField
+              select
+              size="small"
+              label="Organization"
+              value={organizationId}
+              onChange={(e) => {
+                setLoading(true);
+                setWorkers([]);
+                setOrganizationId(e.target.value);
+              }}
+              sx={{ minWidth: 200 }}
+            >
+              {organizations.map((o) => (
+                <MenuItem key={o.id} value={o.id}>
+                  {o.name}
+                </MenuItem>
+              ))}
+            </TextField>
             <Tooltip title="Refresh">
               <IconButton size="small" onClick={loadWorkers}>
                 <RefreshOutlinedIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Button variant="contained" startIcon={<AddOutlinedIcon />} onClick={() => setRegisterOpen(true)}>
+            <Button variant="contained" startIcon={<AddOutlinedIcon />} onClick={() => setRegisterOpen(true)} disabled={!organizationId}>
               Register Worker
             </Button>
           </Stack>

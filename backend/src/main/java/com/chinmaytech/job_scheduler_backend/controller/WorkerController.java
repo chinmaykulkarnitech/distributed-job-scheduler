@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -57,10 +58,21 @@ public class WorkerController {
                     required = true,
                     example = "worker-A"
             )
-            @RequestParam String name
+            @RequestParam String name,
+
+            @Parameter(
+                    description = "Organization the worker belongs to. The caller must be a member.",
+                    required = true
+            )
+            @RequestParam String organizationId,
+            Authentication authentication
     ) {
 
-        Worker worker = workerService.registerWorker(name);
+        Worker worker = workerService.registerWorker(
+                name,
+                organizationId,
+                authentication.getName()
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -90,10 +102,11 @@ public class WorkerController {
                     required = true,
                     example = "84475c92-fa63-4344-8b02-cec33ade9ed4"
             )
-            @PathVariable String workerId
+            @PathVariable String workerId,
+            Authentication authentication
     ) {
 
-        Worker worker = workerService.getWorker(workerId);
+        Worker worker = workerService.getWorker(workerId, authentication.getName());
 
         return ResponseEntity.ok(worker);
     }
@@ -112,10 +125,17 @@ public class WorkerController {
             )
     })
     @GetMapping("/online")
-    public ResponseEntity<List<Worker>> getOnlineWorkers() {
+    public ResponseEntity<List<Worker>> getOnlineWorkers(
+            @Parameter(
+                    description = "Organization whose workers to list. The caller must be a member.",
+                    required = true
+            )
+            @RequestParam String organizationId,
+            Authentication authentication
+    ) {
 
         List<Worker> workers =
-                workerService.getOnlineWorkers();
+                workerService.getOnlineWorkers(organizationId, authentication.getName());
 
         return ResponseEntity.ok(workers);
     }

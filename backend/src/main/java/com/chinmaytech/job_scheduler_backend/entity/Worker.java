@@ -99,6 +99,13 @@ public class Worker {
     )
     private Integer activeJobs;
 
+    @Column(name = "organization_id", length = 36)
+    @Schema(
+            description = "Organization this worker belongs to. A worker can only claim jobs from this organization.",
+            example = "0b8a8c9e-3d0e-4b57-9a56-6f1a4c1d2e90"
+    )
+    private String organizationId;
+
     @PrePersist
     protected void onCreate() {
 

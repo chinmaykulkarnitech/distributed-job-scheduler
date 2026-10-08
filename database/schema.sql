@@ -316,8 +316,11 @@ CREATE TABLE `workers` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `concurrency_limit` int NOT NULL DEFAULT '1',
   `active_jobs` int NOT NULL DEFAULT '0',
+  `organization_id` char(36) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_workers_status_heartbeat` (`status`,`last_heartbeat_at`),
+  KEY `idx_workers_org` (`organization_id`),
+  CONSTRAINT `fk_workers_org` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`),
   CONSTRAINT `chk_worker_active_jobs` CHECK ((`active_jobs` >= 0)),
   CONSTRAINT `chk_worker_status` CHECK ((`status` in (_utf8mb4'ONLINE',_utf8mb4'OFFLINE',_utf8mb4'DRAINING')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

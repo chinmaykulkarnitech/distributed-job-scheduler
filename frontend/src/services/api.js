@@ -141,10 +141,11 @@ export const JobAPI = {
 // Workers
 // ---------------------------------------------------------------------
 export const WorkerAPI = {
-  register: (name) =>
-    api.post(`/api/workers/register`, null, { params: { name } }),
+  register: (name, organizationId) =>
+    api.post(`/api/workers/register`, null, { params: { name, organizationId } }),
   getOne: (workerId) => api.get(`/api/workers/${workerId}`),
-  getOnline: () => api.get('/api/workers/online'),
+  getOnline: (organizationId) =>
+    api.get('/api/workers/online', { params: { organizationId } }),
   heartbeat: (workerId, { cpuUsage, memoryUsage, activeJobs } = {}) =>
     api.post(`/api/workers/${workerId}/heartbeat`, null, {
       params: { cpuUsage, memoryUsage, activeJobs },

@@ -48,15 +48,18 @@ public interface JobRepository extends JpaRepository<Job, String> {
         SELECT j.*
         FROM jobs j
         JOIN queues q ON j.queue_id = q.id
+        JOIN projects p ON q.project_id = p.id
         WHERE j.status = 'QUEUED'
           AND j.run_at <= :now
           AND q.status = 'ACTIVE'
+          AND p.organization_id = :orgId
         ORDER BY j.priority DESC, j.run_at ASC, j.created_at ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED
         """, nativeQuery = true)
     Optional<Job> findNextAvailableJob(
-            @Param("now") LocalDateTime now
+            @Param("now") LocalDateTime now,
+            @Param("orgId") String orgId
     );
     @Query("""
     SELECT j

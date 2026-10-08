@@ -6,6 +6,7 @@ import com.chinmaytech.job_scheduler_backend.repository.JobRepository;
 import com.chinmaytech.job_scheduler_backend.repository.WorkerRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkerRecoveryService {
@@ -50,12 +52,7 @@ public class WorkerRecoveryService {
 
     private void recoverWorker(Worker worker) {
 
-        System.out.println(
-                "STALE WORKER DETECTED: "
-                        + worker.getId()
-                        + " - "
-                        + worker.getName()
-        );
+        log.warn("Stale worker detected: {} ({})", worker.getId(), worker.getName());
 
         /*
          * Lock worker before modifying it.
@@ -104,12 +101,7 @@ public class WorkerRecoveryService {
          */
         for (Job job : runningJobs) {
 
-            System.out.println(
-                    "Recovering job "
-                            + job.getId()
-                            + " from stale worker "
-                            + lockedWorker.getId()
-            );
+            log.info("Recovering job {} from stale worker {}", job.getId(), lockedWorker.getId());
 
             job.setStatus("QUEUED");
 
@@ -135,12 +127,6 @@ public class WorkerRecoveryService {
 
         workerRepository.save(lockedWorker);
 
-        System.out.println(
-                "Worker "
-                        + lockedWorker.getId()
-                        + " marked OFFLINE. "
-                        + runningJobs.size()
-                        + " job(s) recovered."
-        );
+        log.info("Worker {} marked OFFLINE, {} job(s) recovered", lockedWorker.getId(), runningJobs.size());
     }
 }
